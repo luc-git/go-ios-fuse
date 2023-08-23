@@ -29,19 +29,30 @@ type Hellofs struct {
 var afcService *afc.Connection
 var err error
 
+func (self *Hellofs) Opendir(path string) (int, uint64) {
+	return 0, 0
+}
+
 func (self *Hellofs) Open(path string, flags int) (errc int, fh uint64) {
 	return 0, 0
 }
 
 func (self *Hellofs) Getattr(path string, stat *fuse.Stat_t, fh uint64) (errc int) {
 	for _, f := range files {
+		filetype, err := afcService.Stat(f)
+		if err != nil {
+
+		}
 		switch path {
 		case "/":
 			stat.Mode = fuse.S_IFDIR | 0555
-			return 0
 		case "/" + f:
-			stat.Mode = fuse.S_IFREG | 0444
-			return 0
+			if filetype.IsDir() {
+				stat.Mode = fuse.S_IFDIR | 0555
+			}
+			if !filetype.IsDir() {
+				stat.Mode = fuse.S_IFREG | 0444
+			}
 		}
 	}
 	return 0
@@ -56,11 +67,9 @@ func (self *Hellofs) Readdir(path string,
 	ofst int64,
 	fh uint64) (errc int) {
 	fill(".", nil, 0)
-	fill("..", nil, 0)
 	for _, f := range files {
 		fill(f, nil, 0)
 	}
-	//afcService.PullSingleFile("./MediaAnalysis/mediaanalysis.db", ".")
 	return 0
 }
 
@@ -82,7 +91,7 @@ func main() {
 	if err != nil {
 
 	}
-	files, err = afcService.ListFiles("./DCIM/100APPLE", "*")
+	files, err = afcService.ListFiles("./", "*")
 	hellofs := &Hellofs{}
 	host := fuse.NewFileSystemHost(hellofs)
 	host.Mount("", os.Args[1:])
