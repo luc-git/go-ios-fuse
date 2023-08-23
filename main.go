@@ -19,22 +19,21 @@ import (
 	"github.com/danielpaulus/go-ios/ios/afc"
 	"github.com/winfsp/cgofuse/fuse"
 )
- 
- var files []string
 
- type Hellofs struct {
+var files []string
+
+type Hellofs struct {
 	fuse.FileSystemBase
- }
- 
- var afcService *afc.Connection
- var err error
+}
 
+var afcService *afc.Connection
+var err error
 
- func (self *Hellofs) Open(path string, flags int) (errc int, fh uint64) {
+func (self *Hellofs) Open(path string, flags int) (errc int, fh uint64) {
 	return 0, 0
- }
- 
- func (self *Hellofs) Getattr(path string, stat *fuse.Stat_t, fh uint64) (errc int) {
+}
+
+func (self *Hellofs) Getattr(path string, stat *fuse.Stat_t, fh uint64) (errc int) {
 	for _, f := range files {
 		switch path {
 		case "/":
@@ -46,30 +45,30 @@ import (
 		}
 	}
 	return 0
- }
- 
- func (self *Hellofs) Read(path string, buff []byte, ofst int64, fh uint64) (n int) {
-	 return
- }
- 
- func (self *Hellofs) Readdir(path string,
-	 fill func(name string, stat *fuse.Stat_t, ofst int64) bool,
-	 ofst int64,
-	 fh uint64) (errc int) {
-	 fill(".", nil, 0)
-	 fill("..", nil, 0)
-	 for _, f := range files {
+}
+
+func (self *Hellofs) Read(path string, buff []byte, ofst int64, fh uint64) (n int) {
+	return
+}
+
+func (self *Hellofs) Readdir(path string,
+	fill func(name string, stat *fuse.Stat_t, ofst int64) bool,
+	ofst int64,
+	fh uint64) (errc int) {
+	fill(".", nil, 0)
+	fill("..", nil, 0)
+	for _, f := range files {
 		fill(f, nil, 0)
-	 }
-	 //afcService.PullSingleFile("./MediaAnalysis/mediaanalysis.db", ".")
-	 return 0
- }
- 
- func main() {
+	}
+	//afcService.PullSingleFile("./MediaAnalysis/mediaanalysis.db", ".")
+	return 0
+}
+
+func main() {
 	var device ios.DeviceEntry
 
-    device, err = ios.GetDevice("")
-	if err != nil{
+	device, err = ios.GetDevice("")
+	if err != nil {
 
 	}
 	/*if err.Error() == "error getting devicelist"{
@@ -80,11 +79,11 @@ import (
 		fmt.Printf(err.Error())
 		return
 	}*/
-	if err != nil{
-		
+	if err != nil {
+
 	}
 	files, err = afcService.ListFiles("./DCIM/100APPLE", "*")
 	hellofs := &Hellofs{}
 	host := fuse.NewFileSystemHost(hellofs)
 	host.Mount("", os.Args[1:])
- }
+}
