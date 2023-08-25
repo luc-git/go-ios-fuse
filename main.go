@@ -13,7 +13,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path"
 
 	"github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/afc"
@@ -28,6 +30,7 @@ type Hellofs struct {
 
 var afcService *afc.Connection
 var err error
+var isdir map[string]bool
 
 func (self *Hellofs) Opendir(path string) (int, uint64) {
 	return 0, 0
@@ -38,22 +41,13 @@ func (self *Hellofs) Open(path string, flags int) (errc int, fh uint64) {
 }
 
 func (self *Hellofs) Getattr(path string, stat *fuse.Stat_t, fh uint64) (errc int) {
-	for _, f := range files {
-		filetype, err := afcService.Stat(f)
-		if err != nil {
-
-		}
-		switch path {
-		case "/":
-			stat.Mode = fuse.S_IFDIR | 0555
-		case "/" + f:
-			if filetype.IsDir() {
-				stat.Mode = fuse.S_IFDIR | 0555
-			}
-			if !filetype.IsDir() {
-				stat.Mode = fuse.S_IFREG | 0444
-			}
-		}
+	if _, key := isdir[path]; key {
+		stat.Mode = fuse.S_IFDIR | 0555
+	} else {
+		stat.Mode = fuse.S_IFREG | 0444
+	}
+	if path == "/" {
+		stat.Mode = fuse.S_IFDIR | 0555
 	}
 	return 0
 }
@@ -62,13 +56,27 @@ func (self *Hellofs) Read(path string, buff []byte, ofst int64, fh uint64) (n in
 	return
 }
 
-func (self *Hellofs) Readdir(path string,
+func (self *Hellofs) Readdir(dirpath string,
 	fill func(name string, stat *fuse.Stat_t, ofst int64) bool,
 	ofst int64,
 	fh uint64) (errc int) {
-	fill(".", nil, 0)
+	files, err = afcService.ListFiles(path.Join("/", dirpath), "*")
 	for _, f := range files {
-		fill(f, nil, 0)
+		if f != ".." && f != "." {
+			filetype, err := afcService.Stat(path.Join(dirpath, f))
+			if err != nil {
+				fmt.Printf(err.Error() + "\n")
+				continue
+			} else {
+				fmt.Printf("SUCCESSSSSS!!")
+			}
+			if filetype.IsDir() {
+				isdir[path.Join(dirpath, f)] = true
+			} else {
+				isdir[f] = false
+			}
+			fill(f, nil, 0)
+		}
 	}
 	return 0
 }
@@ -91,7 +99,7 @@ func main() {
 	if err != nil {
 
 	}
-	files, err = afcService.ListFiles("./", "*")
+	isdir = make(map[string]bool)
 	hellofs := &Hellofs{}
 	host := fuse.NewFileSystemHost(hellofs)
 	host.Mount("", os.Args[1:])
